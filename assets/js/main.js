@@ -2,7 +2,7 @@
    Terata — beauty & spa
    Лёгкий vanilla JS: только то, что нужно лендингу.
    Модули: header/scroll → mobile nav → reveal → counters → tabs
-           → slider → accordion → active link → fab → misc
+           → slider → accordion → active link → fab → booking form → misc
    ========================================================================== */
 (function () {
   "use strict";
@@ -624,6 +624,325 @@
 
     document.addEventListener("click", function (event) {
       if (isOpen() && !fab.contains(event.target)) setOpen(false);
+    });
+  })();
+
+  /* ---------------------------- ФОРМА ЗАПИСИ ------------------------------ */
+  /* Собирает данные формы секции #booking, проверяет обязательные поля (имя,
+     телефон, согласие) и отправляет JSON на серверless-функцию /api/get-data.
+     Поля телефон/дата/время маскируются при вводе: только цифры, автоформат,
+     корректный backspace; несуществующую дату и время ввести нельзя. Остальные
+     поля (услуга, мастер, комментарий) уходят как есть. Скрытое поле-ловушка
+     отсекает спам-ботов.
+     После отправки экран ВСЕГДА показывает успех — после асинхронной паузы в
+     500 мс и вне зависимости от того, что ответил (или не ответил) сервер. */
+  (function bookingForm() {
+    var form = $("#bookingForm");
+    if (!form) return;
+
+    var status = $("#bookingStatus");
+    var submit = $("button[type='submit']", form);
+    var ENDPOINT = "api/get-data";
+    var SUCCESS_DELAY = 500;   /* искусственная пауза перед показом успеха, мс */
+
+    var fields = {
+      name: $("#bookingName"),
+      phone: $("#bookingPhone"),
+      consent: $("#bookingConsent")
+    };
+    if (!fields.name || !fields.phone || !fields.consent) return;
+
+    /* карточка секции — на ней включается экран успеха */
+    var card = (function () {
+      var el = form.parentNode;
+      while (el && el.nodeType === 1) {
+        if (el.classList && el.classList.contains("booking__card")) return el;
+        el = el.parentNode;
+      }
+      return null;
+    })();
+
+    /* ------------------------- МАСКИ ПОЛЕЙ ПРИ ВВОДЕ ------------------------ */
+    /* Телефон, дата и время вводятся только цифрами и форматируются прямо во
+       время набора. Backspace удаляет последнюю цифру, лишние символы молча
+       отбрасываются. Это надёжнее нативных date/time и ведёт себя одинаково во
+       всех браузерах. */
+    function isDigitChar(ch) { return ch >= "0" && ch <= "9"; }
+
+    function countDigits(value) {
+      var n = 0;
+      for (var i = 0; i < value.length; i++) if (isDigitChar(value.charAt(i))) n++;
+      return n;
+    }
+
+    /* индекс каретки, при котором справа в строке остаётся ровно trailing цифр */
+    function caretByTrailing(formatted, trailing) {
+      if (trailing <= 0) return formatted.length;
+      var seen = 0;
+      for (var i = formatted.length - 1; i >= 0; i--) {
+        if (isDigitChar(formatted.charAt(i))) {
+          seen++;
+          if (seen === trailing) return i;
+        }
+      }
+      return 0;
+    }
+
+    /* навешивает на поле форматирование «на лету»: parse — что оставить из
+       введённого, format — как это показать. allow (необязательный) отсекает
+       невозможные значения: неподходящие цифры справа отбрасываются, так что
+       неверное число записать просто нельзя. Каретку держим по числу цифр
+       справа, поэтому backspace и правка в середине не «прыгают». */
+    function maskInput(input, parse, format, allow) {
+      function apply() {
+        var value = input.value;
+        var caret = input.selectionStart == null ? value.length : input.selectionStart;
+        var trailing = countDigits(value) - countDigits(value.slice(0, caret));
+        var digits = parse(value);
+
+        if (allow) {
+          /* отбрасываем правые цифры, пока значение не станет допустимым */
+          while (digits && !allow(digits)) {
+            digits = digits.slice(0, -1);
+            trailing = Math.min(trailing, countDigits(digits));
+          }
+        }
+
+        var next = format(digits);
+        if (next !== value) input.value = next;
+
+        var pos = caretByTrailing(next, Math.min(trailing, countDigits(next)));
+        try { input.setSelectionRange(pos, pos); } catch (e) { /* не критично */ }
+      }
+      input.addEventListener("input", apply);
+      if (input.value) apply();
+    }
+
+    /* +7 (999) 123-45-67: «8» в начале превращаем в «7», без ведущей «7» — добавляем */
+    function phoneParse(value) {
+      var d = value.replace(/\D/g, "");
+      if (!d) return "";
+      if (d.charAt(0) === "8") d = "7" + d.slice(1);
+      else if (d.charAt(0) !== "7") d = "7" + d;
+      return d.slice(0, 11);
+    }
+    function phoneFormat(d) {
+      if (!d) return "";
+      var rest = d.slice(1);
+      var out = "+7";
+      if (rest.length) out += " (" + rest.slice(0, 3);
+      if (rest.length > 3) out += ") " + rest.slice(3, 6);
+      if (rest.length > 6) out += "-" + rest.slice(6, 8);
+      if (rest.length > 8) out += "-" + rest.slice(8, 10);
+      return out;
+    }
+
+    /* ДД.ММ.ГГГГ */
+    function dateParse(value) { return value.replace(/\D/g, "").slice(0, 8); }
+    function dateFormat(d) {
+      if (!d) return "";
+      var out = d.slice(0, 2);
+      if (d.length > 2) out += "." + d.slice(2, 4);
+      if (d.length > 4) out += "." + d.slice(4, 8);
+      return out;
+    }
+
+    /* ЧЧ:ММ */
+    function timeParse(value) { return value.replace(/\D/g, "").slice(0, 4); }
+    function timeFormat(d) {
+      if (!d) return "";
+      if (d.length <= 2) return d;
+      return d.slice(0, 2) + ":" + d.slice(2, 4);
+    }
+
+    maskInput(fields.phone, phoneParse, phoneFormat);
+    var dateField = $("#bookingDate");
+    var timeField = $("#bookingTime");
+    if (dateField) maskInput(dateField, dateParse, dateFormat, dateDigitsOk);
+    if (timeField) maskInput(timeField, timeParse, timeFormat, timeDigitsOk);
+
+    /* обёртка поля (для подсветки ошибки): .field для input/select/textarea
+       и .checkbox для галочки согласия */
+    function wrapOf(input) {
+      var el = input.parentNode;
+      while (el && el !== form) {
+        if (el.classList && (el.classList.contains("field") || el.classList.contains("checkbox"))) {
+          return el;
+        }
+        el = el.parentNode;
+      }
+      return null;
+    }
+
+    function setInvalid(input, invalid) {
+      var wrap = wrapOf(input);
+      if (wrap) wrap.classList.toggle("is-invalid", invalid);
+      input.setAttribute("aria-invalid", invalid ? "true" : "false");
+    }
+
+    /* телефон считается заполненным, когда введены все 11 цифр маски */
+    function phoneOk(value) {
+      return phoneParse(value).length === 11;
+    }
+
+    /* сколько дней в месяце; пока год не введён целиком, февраль считаем
+       високосным, чтобы разрешить 29.02 до появления полного года */
+    function daysInMonth(month, year) {
+      if (month === 2) {
+        var leap = year === null || (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0));
+        return leap ? 29 : 28;
+      }
+      return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+    }
+
+    /* можно ли записать такие цифры даты — несуществующий день/месяц не вводится */
+    function dateDigitsOk(digits) {
+      var day = digits.slice(0, 2);
+      var month = digits.slice(2, 4);
+      var year = digits.length >= 8 ? +digits.slice(4, 8) : null;
+
+      if (day.length === 1 && +day > 3) return false;          /* день не больше 31 */
+      if (day.length === 2 && (+day < 1 || +day > 31)) return false;
+      if (month.length === 1 && +month > 1) return false;      /* месяц не больше 12 */
+      if (month.length === 2 && (+month < 1 || +month > 12)) return false;
+      if (day.length === 2 && month.length === 2 && +day > daysInMonth(+month, year)) return false;
+      return true;
+    }
+
+    /* можно ли записать такие цифры времени — только 00:00–23:59 */
+    function timeDigitsOk(digits) {
+      var hour = digits.slice(0, 2);
+      var minute = digits.slice(2, 4);
+      if (hour.length === 1 && +hour > 2) return false;
+      if (hour.length === 2 && +hour > 23) return false;
+      if (minute.length === 1 && +minute > 5) return false;
+      if (minute.length === 2 && +minute > 59) return false;
+      return true;
+    }
+
+    function setStatus(message, state) {
+      if (!status) return;
+      status.textContent = message || "";
+      status.classList.remove("is-success", "is-error");
+      if (state) status.classList.add("is-" + state);
+    }
+
+    function collect() {
+      var data = {};
+      $$("input, select, textarea", form).forEach(function (input) {
+        var name = input.getAttribute("name");
+        if (!name) return;
+        data[name] = input.type === "checkbox" ? input.checked : input.value.trim();
+      });
+      return data;
+    }
+
+    /* при правке поле перестаёт считаться ошибочным */
+    Object.keys(fields).forEach(function (key) {
+      var input = fields[key];
+      input.addEventListener(input.type === "checkbox" ? "change" : "input", function () {
+        setInvalid(input, false);
+      });
+    });
+
+    /* возвращает текст ошибки или пустую строку, если всё в порядке */
+    function validate() {
+      var first = null;
+      var checks = [
+        [fields.name, fields.name.value.trim().length >= 2],
+        [fields.phone, phoneOk(fields.phone.value)],
+        [fields.consent, fields.consent.checked]
+      ];
+
+      checks.forEach(function (pair) {
+        setInvalid(pair[0], !pair[1]);
+        if (!pair[1] && !first) first = pair[0];
+      });
+
+      if (!first) return "";
+      first.focus();
+      return "Заполните имя, телефон и подтвердите согласие на обработку данных.";
+    }
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (form.getAttribute("data-sending") === "true") return;
+
+      var problem = validate();
+      if (problem) {
+        setStatus(problem, "error");
+        return;
+      }
+
+      var payload = collect();
+
+      /* бот заполнил скрытое поле — тихо «съедаем» отправку */
+      if (payload.company) {
+        form.reset();
+        setStatus("Спасибо! Заявка отправлена — мы свяжемся с вами.", "success");
+        return;
+      }
+      delete payload.company;
+
+      form.setAttribute("data-sending", "true");
+      if (submit) submit.disabled = true;
+      setStatus("Отправляем заявку…");
+
+      /* Запрос уходит «в фоне» и не влияет на экран: ответ сервера (в том числе
+         ошибку) не показываем — гость в любом случае увидит успех. Ошибку сети
+         гасим здесь же, чтобы «непойманный» запрос не всплыл в консоли. */
+      try {
+        window.fetch(ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }).catch(function () { /* намеренно игнорируем */ });
+      } catch (e) { /* офлайн или старый браузер — успех всё равно покажем */ }
+
+      /* Асинхронная пауза 500 мс: setTimeout не блокирует поток и не «замораживает»
+         интерфейс. После неё показываем успех независимо от ответа сервера. */
+      window.setTimeout(function () {
+        form.reset();
+        Object.keys(fields).forEach(function (key) { setInvalid(fields[key], false); });
+        setStatus("Спасибо! Заявка отправлена — администратор перезвонит и подтвердит время.", "success");
+        form.removeAttribute("data-sending");
+        if (submit) submit.disabled = false;
+        /* явный экран успеха: прячем форму и показываем сообщение об отправке */
+        if (card) card.classList.add("is-done");
+      }, SUCCESS_DELAY);
+    });
+  })();
+
+  /* ---------------------- ДЕМО-УВЕДОМЛЕНИЕ О ЗВОНКЕ ------------------------ */
+  /* Проект демонстрационный: любая кнопка звонка (ссылка tel:) не набирает
+     номер, а показывает короткое всплывающее уведомление внизу экрана. */
+  (function demoNotice() {
+    var toast = document.getElementById("demoToast");
+    if (!toast) return;
+    var timer = null;
+
+    function show() {
+      toast.classList.add("is-visible");
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(function () {
+        toast.classList.remove("is-visible");
+        timer = null;
+      }, 2600);
+    }
+
+    document.addEventListener("click", function (event) {
+      var node = event.target;
+      var link = null;
+      while (node && node !== document) {
+        if (node.tagName === "A") {
+          var href = node.getAttribute("href") || "";
+          if (href.indexOf("tel:") === 0) { link = node; break; }
+        }
+        node = node.parentNode;
+      }
+      if (!link) return;
+      event.preventDefault();
+      show();
     });
   })();
 

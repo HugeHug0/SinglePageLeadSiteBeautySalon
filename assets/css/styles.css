@@ -21,6 +21,7 @@
   --rose:       #E0A79F;
   --rose-2:     #F7E1DB;
   --sage:       #A8B39A;
+  --error:      #B4544C;
 
   --line:       rgba(31, 24, 27, .10);
   --line-2:     rgba(31, 24, 27, .06);
@@ -279,6 +280,40 @@ p { text-wrap: pretty; }
 .btn--outline-light:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1px rgba(240, 217, 180, .6); }
 
 .btn--sm { padding: 12px 22px; font-size: 14px; }
+
+/* крупные кнопки героя — «Позвонить…» и «Смотреть услуги»: заметно больше
+   обычных, чтобы по ним было удобно попадать на любом устройстве */
+.btn--xl { padding: 20px 46px; font-size: 17.5px; }
+.btn--xl svg { width: 20px; height: 20px; }
+
+/* кнопка «Записаться» — главный призыв страницы: ведёт к форме в конце документа
+   (#booking). Крупная, золотой градиент выделяет её среди остальных. Тень
+   намеренно мягкая и небольшая: широкие размытия на больших кнопках замедляют
+   отрисовку во время прокрутки, поэтому здесь обходимся без --shadow-glow. */
+.btn--book {
+  padding: 22px 54px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  background: var(--grad-gold);
+  color: #241B1F;
+  box-shadow: 0 16px 30px -18px rgba(169, 133, 90, .85);
+}
+.btn--book svg { width: 21px; height: 21px; }
+.btn--book:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 42px -20px rgba(169, 133, 90, .95);
+}
+
+/* блок-призыв в конце секции: подпись + крупная кнопка по центру */
+.section-cta {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  margin-top: clamp(28px, 4vw, 50px);
+  text-align: center;
+}
+.section-cta p { max-width: 54ch; font-size: 14.5px; color: var(--muted); }
 
 .arrow-link {
   display: inline-flex;
@@ -1471,6 +1506,177 @@ p { text-wrap: pretty; }
 .map-card__label { font-size: 13px; }
 .map-card__label strong { display: block; font-family: var(--serif); font-size: 20px; line-height: 1.25; }
 .map-card__label span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+
+/* --------------------------------- BOOKING -------------------------------- */
+/* Секция записи стоит последней в потоке документа: к ней ведут крупные кнопки
+   «Записаться» (.btn--book) из разных мест страницы. Обязательны только имя,
+   телефон и согласие — остальные поля можно пропустить.
+   ВАЖНО (производительность): у карточки намеренно НЕТ backdrop-filter. Крупный
+   элемент с размытием фона пересчитывается браузером в каждом кадре прокрутки и
+   заметно снижает FPS. Полупрозрачной заливки сходит с рук без потерь. */
+.booking { position: relative; }
+
+.booking__card {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(24px, 4.2vw, 54px);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(120% 90% at 10% 0%, rgba(224, 167, 159, .16), transparent 58%),
+    radial-gradient(120% 100% at 92% 100%, rgba(201, 168, 124, .2), transparent 62%),
+    rgba(255, 255, 255, .72);
+  box-shadow: var(--shadow-md), inset 0 0 0 1px var(--line-2);
+}
+
+.booking-form__grid { display: grid; gap: 16px 18px; }
+
+@media (min-width: 700px) {
+  .booking-form__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .booking-form__grid > .field--full { grid-column: 1 / -1; }
+}
+
+.field { display: flex; flex-direction: column; gap: 8px; }
+
+.field__label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+.field__label .req,
+.checkbox .req { color: var(--rose); }
+
+.field__control {
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: var(--r-sm);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink);
+  background: rgba(255, 255, 255, .82);
+  box-shadow: inset 0 0 0 1px var(--line);
+  transition: background-color .3s var(--ease), box-shadow .3s var(--ease);
+}
+.field__control::placeholder { color: var(--muted-2); }
+.field__control:hover { background: #fff; }
+.field__control:focus {
+  outline: none;
+  background: #fff;
+  box-shadow: inset 0 0 0 1.6px var(--gold), 0 0 0 4px rgba(201, 168, 124, .18);
+}
+
+textarea.field__control { min-height: 116px; resize: vertical; }
+
+select.field__control {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 44px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='m6 9 6 6 6-6' stroke='%238B7C82' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 18px 18px;
+}
+select.field__control:hover { background-color: #fff; }
+
+.field.is-invalid .field__control {
+  box-shadow: inset 0 0 0 1.6px var(--error), 0 0 0 4px rgba(180, 84, 76, .14);
+}
+
+/* ловушка для ботов: поле есть в разметке, но человек его не видит и не заполняет */
+.booking-form__hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 22px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  cursor: pointer;
+}
+.checkbox input[type="checkbox"] {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  accent-color: var(--gold-3);
+  cursor: pointer;
+}
+.checkbox.is-invalid { color: var(--error); }
+
+.booking-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 22px;
+  margin-top: 28px;
+}
+
+.booking-form__status {
+  flex: 1 1 240px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.booking-form__status.is-success { color: #3F7A4E; }
+.booking-form__status.is-error { color: var(--error); }
+
+/* явный экран успеха: карточка с классом is-done прячет форму и показывает блок */
+.booking-form__done { display: none; padding: 8px 0; text-align: center; }
+.booking__card.is-done .booking-form { display: none; }
+.booking__card.is-done .booking-form__done { display: block; }
+.booking-form__done-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: var(--grad-gold);
+  color: #241B1F;
+}
+.booking-form__done-icon svg { width: 36px; height: 36px; }
+.booking-form__done-title { font-family: var(--serif); font-size: clamp(24px, 3vw, 34px); font-weight: 600; }
+.booking-form__done-text { max-width: 46ch; margin: 12px auto 0; font-size: 15px; color: var(--muted); }
+
+/* всплывающее уведомление демо-проекта на кнопках звонка */
+.demo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  z-index: 90;
+  padding: 14px 24px;
+  border-radius: var(--r-pill);
+  background: rgba(31, 24, 27, .94);
+  color: #FBF7F4;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-md);
+  transform: translate(-50%, 14px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s var(--ease), transform .3s var(--ease);
+}
+.demo-toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 560px) {
+  .booking__card { border-radius: var(--r-lg); }
+  .booking-form__actions .btn { width: 100%; }
+  /* крупные кнопки чуть меньше на узких экранах, но остаются большими */
+  .btn--xl { padding: 16px 30px; font-size: 16px; }
+  .btn--book { padding: 18px 34px; font-size: 16.5px; }
+}
 
 /* ------------------------------ ИКОНКИ СОЦСЕТЕЙ ----------------------------- */
 /* Бренд-логи (Simple Icons, CC0) лежат одним спрайтом в начале <body> —
