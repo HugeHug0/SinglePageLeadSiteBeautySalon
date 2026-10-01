@@ -642,13 +642,14 @@
 
     var status = $("#bookingStatus");
     var submit = $("button[type='submit']", form);
-    var ENDPOINT = "api/get-data";
+    var ENDPOINT = "/api/get-data";
     var SUCCESS_DELAY = 500;   /* искусственная пауза перед показом успеха, мс */
 
+    /* обязательные поля берём из самой формы по их name-атрибутам */
     var fields = {
-      name: $("#bookingName"),
-      phone: $("#bookingPhone"),
-      consent: $("#bookingConsent")
+      name: form.elements.namedItem("name"),
+      phone: form.elements.namedItem("phone"),
+      consent: form.elements.namedItem("consent")
     };
     if (!fields.name || !fields.phone || !fields.consent) return;
 
@@ -827,14 +828,12 @@
       if (state) status.classList.add("is-" + state);
     }
 
-    function collect() {
-      var data = {};
-      $$("input, select, textarea", form).forEach(function (input) {
-        var name = input.getAttribute("name");
-        if (!name) return;
-        data[name] = input.type === "checkbox" ? input.checked : input.value.trim();
-      });
-      return data;
+    /* Значение поля берём прямо из формы по его name-атрибуту: чекбокс — флаг
+       checked, остальное — обрезанный текст. Если поля в форме нет — пустая строка. */
+    function formValue(name) {
+      var input = form.elements.namedItem(name);
+      if (!input) return "";
+      return input.type === "checkbox" ? input.checked : String(input.value).trim();
     }
 
     /* при правке поле перестаёт считаться ошибочным */
@@ -874,7 +873,21 @@
         return;
       }
 
-      var payload = collect();
+      /* payload — это данные формы: значения берём прямо из её полей по их
+         name-атрибутам, ключи совпадают с name. Состав заявки виден целиком —
+         чтобы добавить или убрать поле, правьте этот объект. */
+      var payload = {
+        name: formValue("name"),
+        phone: formValue("phone"),
+        service: formValue("service"),
+        master: formValue("master"),
+        date: formValue("date"),
+        time: formValue("time"),
+        comment: formValue("comment"),
+        company: formValue("company"),
+        consent: formValue("consent"),
+        source_name: "beauty_salon_terata"
+      };
 
       /* бот заполнил скрытое поле — тихо «съедаем» отправку */
       if (payload.company) {
@@ -896,7 +909,19 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
-        }).catch(function () { /* намеренно игнорируем */ });
+        }).then((response) => {
+            if (!response.ok) {
+              throw new Error(`Ошибка сервера: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            console.log('Успешно записано:', data.success);
+            console.log('Ответ сервера:', data.data);
+          })
+          .catch((err) => {
+            console.error("Ошибка при отправке данных:", err);
+          });
       } catch (e) { /* офлайн или старый браузер — успех всё равно покажем */ }
 
       /* Асинхронная пауза 500 мс: setTimeout не блокирует поток и не «замораживает»
