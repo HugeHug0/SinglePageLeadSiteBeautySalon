@@ -418,49 +418,153 @@ p { text-wrap: pretty; }
 /* -------------------------------- TOPFILM --------------------------------- */
 /* Живое видео в самом начале страницы. Пока файл идёт по сети, на его месте
    видны постер и градиент в палитре сайта, поэтому первый экран никогда не
-   выглядит пустым. Снизу кадр растворяется в фоне страницы, сверху — мягкая
-   светлая вуаль, чтобы шапка с тёмным лого читалась поверх видео. */
+   выглядит пустым.
+
+   Ролик идёт ВО ВСЮ ШИРИНУ окна, без боковых полей. Полоса держит пропорции
+   ролика (--film-w / --film-h), а её высота не превышает высоту экрана
+   (--film-max-h: 100vh) — если окно шире этих пропорций, кадр заполняет полосу
+   по принципу cover и мягко обрезается сверху-снизу (боковых «полей» и
+   пунктирных углов не остаётся). Поэтому:
+     • на мониторе, близком по пропорциям к ролику, кадр занимает весь первый
+       экран целиком, без обрезки;
+     • на широком и невысоком окне ролик растягивается на всю ширину, лишнее
+       уходит за верхний и нижний край;
+     • на телефоне это полоса во всю ширину, высота считается из пропорций.
+   Сверху кадр прикрыт светлой вуалью (поверх неё читается тёмное лого шапки),
+   снизу плавно растворяется в фоне страницы и закругляется — переход к
+   остальному сайту получается мягким, без резкой границы. */
 .topfilm {
+  /* Пропорции ролика: ширина и высота кадра. Для другого видео подставьте его
+     реальные размеры (например 1920 и 1080) — остальное посчитается само. */
+  --film-w: 4096;
+  --film-h: 2160;
+  --film-ratio: var(--film-w) / var(--film-h);
+  /* выше экрана полоса не поднимается: ролик не растягивается на несколько
+     экранов, лишнее уходит за верхний и нижний край */
+  --film-max-h: 100vh;
+  /* высота светлых кромок вуали (сверху и снизу). Нижняя кромка длиннее: она
+     плавно переводит тёмный кадр в светлый фон страницы */
+  --film-fade-top: clamp(56px, 12%, 104px);
+  --film-fade-bottom: min(30%, 260px);
   position: relative;
   isolation: isolate;
+}
+
+.topfilm__frame {
+  position: relative;
   display: flex;
   align-items: flex-end;
-  min-height: clamp(236px, 44vh, 360px);
+  /* полоса на всю ширину страницы; высота выводится из пропорций ролика, но
+     не превышает экран */
+  width: 100%;
+  aspect-ratio: var(--film-ratio);
+  max-height: var(--film-max-h);
   padding-inline: var(--gutter);
   overflow: hidden;
+  /* низ полосы закругляется — видео переходит в страницу мягко, без резкой
+     прямой границы на всю ширину */
+  border-end-start-radius: var(--r-xl);
+  border-end-end-radius: var(--r-xl);
   background: linear-gradient(118deg, #241B1F 0%, #402C33 36%, #7A5A50 68%, #C9A87C 100%);
+}
+
+/* кадр-подложка из того же ролика: пока видео грузится (или если оно не
+   загрузилось), место занято его первым кадром — пустой полосы не видно */
+.topfilm__frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/images/beauty-salon-main.webp") center / cover no-repeat;
 }
 
 .topfilm__video {
   position: absolute;
   inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
+  /* cover — ролик занимает полосу целиком, во всю ширину окна: боковых полей
+     не остаётся. Боковые пропорции у ролика и полосы совпадают, поэтому
+     обрезается он ровно столько, сколько нужно, чтобы заполнить полосу по
+     высоте (обычно это самые края кадра). */
   object-fit: cover;
-  object-position: center 40%;
+  object-position: center;
 }
 
 .topfilm__veil {
   position: absolute;
   inset: 0;
+  /* вуаль лежит ПОВЕРХ ролика (у видео z-index: 1) — иначе градиенты не видны
+     и кадр упирается в фон страницы жёсткой линией */
+  z-index: 2;
   pointer-events: none;
   background-image:
-    linear-gradient(180deg, rgba(251, 247, 244, .96) 0%, rgba(251, 247, 244, .48) 8%, rgba(251, 247, 244, 0) 20%),
-    linear-gradient(0deg, rgba(251, 247, 244, .95) 0%, rgba(251, 247, 244, .6) 7%, rgba(251, 247, 244, 0) 22%);
+    linear-gradient(180deg, rgba(251, 247, 244, .9) 0%, rgba(251, 247, 244, .34) calc(var(--film-fade-top) * .4), rgba(251, 247, 244, 0) var(--film-fade-top)),
+    /* снизу кадр доходит до цвета фона страницы и растворяется в нём
+       длинным мягким шлейфом — стык видео и сайта не читается как граница */
+    linear-gradient(0deg,
+      rgba(251, 247, 244, 1) 0%,
+      rgba(251, 247, 244, .92) calc(var(--film-fade-bottom) * .2),
+      rgba(251, 247, 244, .62) calc(var(--film-fade-bottom) * .46),
+      rgba(251, 247, 244, .26) calc(var(--film-fade-bottom) * .72),
+      rgba(251, 247, 244, 0) var(--film-fade-bottom));
 }
 
 /* два класса — чтобы перебить margin у .eyebrow, он объявлен ниже по файлу */
 .topfilm .topfilm__label {
   position: relative;
-  z-index: 1;
+  /* поверх вуали (z-index: 2), чтобы плашка читалась на светлом переходе */
+  z-index: 3;
   margin-bottom: clamp(22px, 3.4vw, 40px);
 }
 
-/* первый экран идёт сразу под кадром — отступ под шапку ему больше не нужен */
-.topfilm + .hero { padding-top: clamp(44px, 6vw, 84px); }
+/* первый экран идёт сразу под кадром: отступ под шапку ему не нужен, кадр и
+   так начинается от самого верха страницы и уходит под неё. Отступ чуть больше
+   обычного — между видео и текстом остаётся воздух, переход читается мягче */
+.topfilm + .hero { padding-top: clamp(52px, 7vw, 104px); }
+
+/* ------------------------------ ФОТОБАННЕРЫ ------------------------------- */
+
+.photoband {
+  --band-ratio: 3 / 2;
+  position: relative;
+  aspect-ratio: var(--band-ratio);
+  overflow: hidden;
+  background: linear-gradient(118deg, #241B1F 0%, #402C33 36%, #7A5A50 68%, #C9A87C 100%);
+}
+
+.photoband__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* мягкие светлые кромки: полоса не «приклеена» к фону страницы */
+.photoband__veil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(251, 247, 244, .55) 0%, rgba(251, 247, 244, 0) min(16%, 110px)),
+    linear-gradient(0deg, rgba(251, 247, 244, .55) 0%, rgba(251, 247, 244, 0) min(18%, 130px));
+}
+
+/* страховка на случай, если в src снова окажется техническая заглушка
+   (data:image/...) — тогда место под фото обведено пунктиром; как только
+   появится настоящая ссылка, правило перестанет действовать само */
+.photoband:has(.photoband__img[src^="data:"])::after {
+  content: "";
+  position: absolute;
+  inset: clamp(14px, 2vw, 26px);
+  border: 1px dashed rgba(255, 255, 255, .5);
+  border-radius: var(--r-lg);
+  pointer-events: none;
+}
 
 @media (min-width: 900px) {
-  .topfilm { min-height: clamp(320px, 56vh, 560px); }
+  /* на большом экране полоса-разделитель становится кинематографичнее */
+  .photoband { --band-ratio: 2 / 1; }
 }
 
 /* ---------------------------------- HERO ---------------------------------- */
@@ -656,7 +760,7 @@ p { text-wrap: pretty; }
     radial-gradient(115% 85% at 16% 10%, rgba(255, 246, 236, .26), transparent 54%),
     radial-gradient(100% 95% at 52% 104%, rgba(201, 168, 124, .5), transparent 62%),
     linear-gradient(160deg, rgba(36, 26, 30, .74) 0%, rgba(58, 44, 49, .4) 52%, rgba(36, 26, 30, .8) 100%),
-    url("../img/salon-panel.jpg") center / cover no-repeat;
+    url("https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/images/salon-panel.jpg") center / cover no-repeat;
   box-shadow: var(--shadow-lg), inset 0 0 0 1px rgba(255, 255, 255, .2);
 }
 
