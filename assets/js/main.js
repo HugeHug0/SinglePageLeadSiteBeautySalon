@@ -548,14 +548,24 @@
   /* ---------------------------- ФОНОВОЕ ВИДЕО ------------------------------ */
   /* Кадр в самом начале страницы играет сам, но только пока его видно: вне
      экрана и в фоновой вкладке видео ставится на паузу, чтобы декодер не
-     отбирал кадры у прокрутки. При «уменьшении анимации» видео не запускается —
-     остаётся постер, он же подложка на время загрузки. */
+     отбирал кадры у прокрутки. Ролик НЕ автостартует из разметки (у <video> нет
+     атрибута autoplay) — запуск инициирует этот скрипт, поэтому на телефоне при
+     «экономном режиме» трафика тяжёлое видео вообще не скачивается, а гостю
+     показывается постер-кадр. При «уменьшении анимации» ролик тоже не играет. */
   (function heroFilm() {
     var film = document.getElementById("topfilmVideo");
     if (!film) return;
 
+    /* Экономия трафика: ролик тяжёлый (4K). Если гость включил «экономный режим»
+       браузера, у него медленное соединение (2G/3G) или он попросил не тратить
+       данные, видео не запускаем вовсе — остаётся лёгкий постер (webp). */
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    var thrifty =
+      (conn && (conn.saveData || /(^|-)2g$|(^|-)3g$/.test(conn.effectiveType || ""))) ||
+      (window.matchMedia && window.matchMedia("(prefers-reduced-data: reduce)").matches);
+
     function play() {
-      if (prefersReduced || document.hidden) return;
+      if (prefersReduced || thrifty || document.hidden) return;
       var started = film.play();
       /* автозапуск может быть запрещён настройками браузера — тогда и постера
          достаточно, никаких ошибок показывать не нужно */
@@ -566,7 +576,7 @@
       if (!film.paused) film.pause();
     }
 
-    if (prefersReduced) {
+    if (prefersReduced || thrifty) {
       pause();
       return;
     }
@@ -885,7 +895,6 @@
         time: formValue("time"),
         comment: formValue("comment"),
         company: formValue("company"),
-        consent: formValue("consent"),
         source_name: "beauty_salon_terata"
       };
 

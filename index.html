@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <script>document.documentElement.classList.remove("no-js");</script>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Terata — салон красоты в центре Москвы | Парикмахерские, ногти, косметология, SPA</title>
   <meta name="description" content="Terata — авторский салон красоты: стрижки и окрашивание, маникюр, брови и ресницы, косметология и SPA-ритуалы. Мастера с опытом от 7 лет, премиальные материалы. Первый визит со скидкой 15%.">
   <meta name="keywords" content="салон красоты, парикмахерская, окрашивание, маникюр, педикюр, косметология, брови, ресницы, spa, массаж, Terata, Москва">
@@ -29,9 +29,9 @@
   <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap"></noscript>
 
-  <!-- ?v=2 — версия файла: браузер сразу возьмёт свежий styles.css, а не копию
-       из кэша. После правок стилей увеличивайте число (v=3, v=4 …). -->
-  <link rel="stylesheet" href="assets/css/styles.css?v=5">
+  <!-- ?v=6 — версия файла: браузер сразу возьмёт свежий styles.css, а не копию
+       из кэша. После правок стилей увеличивайте число (v=7, v=8 …). -->
+  <link rel="stylesheet" href="assets/css/styles.css?v=6">
 
   <script type="application/ld+json">
   {
@@ -129,10 +129,13 @@
     <!-- ================= АТМОСФЕРА: живое видео ================= -->
     <section class="topfilm" aria-label="Атмосфера салона">
       <div class="topfilm__frame">
+        <!-- autoplay НЕ выставлен в разметке: ролик запускает main.js только когда
+             он попал в экран и у гостя не включён «экономный режим» интернета — так
+             телефон не качает тяжёлое 4K-видео зря, а до старта виден постер-кадр -->
         <video class="topfilm__video" id="topfilmVideo"
                src="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/video/beauty-salon-main.mp4"
                poster="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/images/beauty-salon-main.webp"
-               muted loop playsinline autoplay preload="auto"
+               muted loop playsinline preload="metadata" disablepictureinpicture
                aria-hidden="true" tabindex="-1"></video>
         <span class="topfilm__veil" aria-hidden="true"></span>
         <p class="eyebrow topfilm__label"><span class="eyebrow__pulse" aria-hidden="true"></span>Живая атмосфера салона</p>

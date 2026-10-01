@@ -60,6 +60,15 @@
   --ease: cubic-bezier(.22, 1, .36, 1);
   --ease-soft: cubic-bezier(.45, 0, .55, 1);
   --header-h: 78px;
+
+  /* Вырезы экрана (iPhone с «бровью», жестовая полоса снизу, ландшафтные
+     «ушки»). На обычном мониторе и в десктопных браузерах все значения = 0,
+     поэтому базовые размеры не меняются — переменные работают только там,
+     где реально есть вырез. viewport-fit=cover в <meta viewport> включает их. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 }
 
 /* ---------------------------------- RESET --------------------------------- */
@@ -69,7 +78,8 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--header-h) + 18px);
+  /* отступ якорной прокрутки учитывает и высоту шапки, и «бровь» экрана */
+  scroll-padding-top: calc(var(--header-h) + var(--safe-top, 0px) + 18px);
   -webkit-text-size-adjust: 100%;
 }
 
@@ -83,6 +93,9 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* серый «хайлайт» при тапе по ссылкам на мобильных убираем: он выглядит
+     случайной плашкой поверх аккуратной вёрстки */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Декоративная подложка живёт отдельным фиксированным слоем. Раньше это был
@@ -109,6 +122,11 @@ svg { flex: none; }
 a { color: inherit; text-decoration: none; }
 ul, ol { list-style: none; padding: 0; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+/* На тач-экранах убираем задержку ~300 мс и «резиновое» масштабирование от
+   двойного тапа: жест читается как клик. Увеличение «щипком» при этом остаётся. */
+a, button, [role="button"], .btn, .tabs__btn, .nav__link,
+input, select, textarea, label.checkbox { touch-action: manipulation; }
 
 h1, h2, h3, h4 {
   font-family: var(--serif);
@@ -352,14 +370,16 @@ p { text-wrap: pretty; }
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 100;
-  height: var(--header-h);
+  /* высота = обычная + «бровь» экрана: логотип и кнопки не заезжают под неё */
+  height: calc(var(--header-h) + var(--safe-top, 0px));
+  padding-top: var(--safe-top, 0px);
   display: flex;
   align-items: center;
   transition: background-color .4s var(--ease), box-shadow .4s var(--ease), height .4s var(--ease);
 }
 
 .header.is-scrolled {
-  height: 68px;
+  height: calc(68px + var(--safe-top, 0px));
   background: rgba(251, 247, 244, .84);
   backdrop-filter: blur(18px) saturate(150%);
   box-shadow: 0 1px 0 var(--line), 0 18px 40px -34px rgba(31, 24, 27, .55);
@@ -475,8 +495,11 @@ p { text-wrap: pretty; }
   --film-h: 2160;
   --film-ratio: var(--film-w) / var(--film-h);
   /* выше экрана полоса не поднимается: ролик не растягивается на несколько
-     экранов, лишнее уходит за верхний и нижний край */
+     экранов, лишнее уходит за верхний и нижний край.
+     100svh — «статичная» высота окна: на мобильных адресная строка не «дёргает»
+     полосу при прокрутке. 100vh оставлен запасным для старых браузеров. */
   --film-max-h: 100vh;
+  --film-max-h: 100svh;
   /* высота светлых кромок вуали (сверху и снизу). Нижняя кромка длиннее: она
      плавно переводит тёмный кадр в светлый фон страницы */
   --film-fade-top: clamp(56px, 12%, 104px);
@@ -1654,7 +1677,7 @@ select.field__control:hover { background-color: #fff; }
 .demo-toast {
   position: fixed;
   left: 50%;
-  bottom: 26px;
+  bottom: calc(26px + var(--safe-bottom, 0px));
   z-index: 90;
   padding: 14px 24px;
   border-radius: var(--r-pill);
@@ -1768,7 +1791,7 @@ select.field__control:hover { background-color: #fff; }
   position: relative;
   display: grid;
   gap: 12px;
-  padding: 24px 0 36px;
+  padding: 24px 0 calc(36px + var(--safe-bottom, 0px));
   border-top: 1px solid var(--line-light);
   font-size: 12.5px;
   color: rgba(246, 238, 231, .5);
@@ -1782,8 +1805,8 @@ select.field__control:hover { background-color: #fff; }
    страницы сервисов, список живёт над кнопкой и закрывается по Esc/клику мимо. */
 .fab {
   position: fixed;
-  right: clamp(16px, 3vw, 32px);
-  bottom: clamp(16px, 3vw, 32px);
+  right: calc(clamp(16px, 3vw, 32px) + var(--safe-right, 0px));
+  bottom: calc(clamp(16px, 3vw, 32px) + var(--safe-bottom, 0px));
   z-index: 90;
   display: flex;
   flex-direction: column;
@@ -1938,7 +1961,14 @@ select.field__control:hover { background-color: #fff; }
     justify-content: space-between;
     gap: 32px;
     overflow-y: auto;
-    padding: calc(var(--header-h) + 26px) var(--gutter) 40px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;   /* прокрутка меню не «проваливается» на страницу */
+    /* отступы учитывают «бровь» сверху и жестовую полосу снизу, чтобы контент
+       меню не заезжал под вырезы экрана */
+    padding: calc(var(--header-h) + var(--safe-top, 0px) + 22px)
+             calc(var(--gutter) + var(--safe-right, 0px))
+             calc(40px + var(--safe-bottom, 0px))
+             calc(var(--gutter) + var(--safe-left, 0px));
     background: rgba(251, 247, 244, .96);
     backdrop-filter: blur(18px) saturate(140%);
     opacity: 0;
@@ -1994,6 +2024,65 @@ select.field__control:hover { background-color: #fff; }
   .map-card__link { width: 100%; justify-content: center; }
   .cta { border-radius: var(--r-lg); }
   .footer__socials { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ------------------------- МОБИЛЬНАЯ ОПТИМИЗАЦИЯ ---------------------------- */
+/* Телефоны и небольшие планшеты: упрощаем самые дорогие для отрисовки слои и
+   подгоняем крупные блоки под палец. Разметка и сценарии не меняются, поэтому
+   содержимое страницы и поведение остаются прежними. */
+@media (max-width: 767px) {
+  /* Три больших анимированных размытия («блобы») в первом экране — самый
+     тяжёлый слой страницы: на телефоне мягкую цветную подложку героя строит
+     статичный градиент body::before, а сами плавающие круги убираем совсем */
+  .hero__bg .blob { display: none; }
+
+  /* Фоновая полоса видео: узкая лента 16:9 на телефоне выглядит тонкой
+     «планкой». Задаём высоту в долях окна — ролик читается как полноценная
+     шапка героя. vh-строка оставлена запасной для браузеров без svh. */
+  .topfilm__frame {
+    aspect-ratio: auto;
+    height: clamp(300px, 58vh, 540px);
+    height: clamp(300px, 58svh, 540px);
+  }
+}
+
+@media (max-width: 560px) {
+  /* Главные кнопки-призывы разворачиваем в столбик во всю ширину: так по ним
+     удобно попадать большим пальцем, а длинный текст не рвётся посередине */
+  .hero__actions,
+  .cta__actions { flex-direction: column; align-items: stretch; }
+  .hero__actions .btn,
+  .cta__actions .btn { width: 100%; }
+
+  /* Поля формы — 16px: при меньшем размере iOS Safari сам зумит страницу в
+     момент фокуса на поле, из-за чего вёрстка «уезжает» */
+  .field__control { font-size: 16px; }
+
+  /* Прайс: на узком экране табы превращаем в горизонтальную ленту со свайпом,
+     а не в три строки «таблеток» */
+  .tabs__nav {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+    padding-inline: 12px;
+  }
+  .tabs__nav::-webkit-scrollbar { display: none; }
+  .tabs__btn { flex: none; scroll-snap-align: start; }
+}
+
+/* Очень узкие экраны (320–400px): ужимаем логотип и промежутки шапки, чтобы
+   строка «логотип + кнопка звонка + бургер» помещалась без переноса */
+@media (max-width: 400px) {
+  .header__inner { gap: 12px; }
+  .header__actions { gap: 10px; }
+  .logo { gap: 8px; }
+  .logo__mark { width: 34px; height: 34px; }
+  .logo__name { font-size: 22px; }
+  .logo__tag { letter-spacing: .28em; }
 }
 
 /* -------------------------- ACCESSIBILITY / MOTION -------------------------- */
