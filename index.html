@@ -29,9 +29,9 @@
   <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap"></noscript>
 
-  <!-- ?v=7 — версия файла: браузер сразу возьмёт свежий styles.css, а не копию
-       из кэша. После правок стилей увеличивайте число (v=8, v=9 …). -->
-  <link rel="stylesheet" href="assets/css/styles.css?v=7">
+  <!-- ?v=8 — версия файла: браузер сразу возьмёт свежий styles.css, а не копию
+       из кэша. После правок стилей увеличивайте число (v=9, v=10 …). -->
+  <link rel="stylesheet" href="assets/css/styles.css?v=8">
 
   <script type="application/ld+json">
   {
@@ -146,29 +146,12 @@
     <!-- ================= АТМОСФЕРА: живое видео ================= -->
     <section class="topfilm" aria-label="Атмосфера салона">
       <div class="topfilm__frame">
-        <!-- autoplay НЕ выставлен в разметке: ролик запускает main.js. На десктопе —
-             сам, когда кадр попал в экран; на телефоне — только по кнопке ниже
-             (тяжёлый 4K-декод на телефоне и есть причина лагов), а при «экономном
-             режиме» интернета видео вообще не качается, остаётся постер-кадр.
-
-             data-src-compact — облегчённый ролик для телефона: положите рядом файл
-             beauty-salon-main-mobile.mp4 (720p, ~1–2 Мбит/с). Если его нет — скрипт
-             молча вернётся к полноразмерному ролику. -->
         <video class="topfilm__video" id="topfilmVideo"
-               src="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/video/beauty-salon-main.mp4"
-               data-src-compact="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/video/beauty-salon-main-mobile.mp4"
+               src="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/video/beauty-salon-main-video.webm"
                poster="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/images/beauty-salon-main.webp"
-               muted loop playsinline preload="metadata" disablepictureinpicture
+               muted loop playsinline autoplay preload="auto"
                aria-hidden="true" tabindex="-1"></video>
         <span class="topfilm__veil" aria-hidden="true"></span>
-
-        <!-- кнопка запуска ролика: показывается только на телефоне, пока видео не
-             играет. Скрипт держит её скрытой (hidden) на десктопе и в экономном
-             режиме — там, где ролик стартует сам или не нужен вовсе -->
-        <button class="topfilm__play" id="topfilmPlay" type="button" hidden>
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6.3v11.4L18.6 12 9 6.3Z" fill="currentColor"/></svg>
-          <span>Включить видео</span>
-        </button>
         <p class="eyebrow topfilm__label"><span class="eyebrow__pulse" aria-hidden="true"></span>Живая атмосфера салона</p>
       </div>
     </section>

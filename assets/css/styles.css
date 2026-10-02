@@ -499,11 +499,8 @@ p { text-wrap: pretty; }
   --film-h: 2160;
   --film-ratio: var(--film-w) / var(--film-h);
   /* выше экрана полоса не поднимается: ролик не растягивается на несколько
-     экранов, лишнее уходит за верхний и нижний край.
-     100svh — «статичная» высота окна: на мобильных адресная строка не «дёргает»
-     полосу при прокрутке. 100vh оставлен запасным для старых браузеров. */
+     экранов, лишнее уходит за верхний и нижний край */
   --film-max-h: 100vh;
-  --film-max-h: 100svh;
   /* высота светлых кромок вуали (сверху и снизу). Нижняя кромка длиннее: она
      плавно переводит тёмный кадр в светлый фон страницы */
   --film-fade-top: clamp(56px, 12%, 104px);
@@ -551,37 +548,7 @@ p { text-wrap: pretty; }
      высоте (обычно это самые края кадра). */
   object-fit: cover;
   object-position: center;
-  /* выносим кадр в отдельный композитный слой: при прокрутке браузер не
-     перерисовывает видео вместе с остальной страницей — меньше «дёрганья» */
-  transform: translateZ(0);
-  backface-visibility: hidden;
 }
-
-/* Кнопка запуска ролика. Нужна только там, где видео не стартует само — на
-   телефоне (тяжёлый 4K-декод даёт лаги, запуск идёт по тапу) и в экономном
-   режиме. На десктопе скрипт держит её скрытой через атрибут hidden. */
-.topfilm__play {
-  position: absolute;
-  top: 50%;
-  right: calc(var(--gutter) + 4px);
-  z-index: 3;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 13px 20px 13px 16px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, .92);
-  color: var(--ink);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  box-shadow: 0 16px 34px -18px rgba(31, 24, 27, .55), inset 0 0 0 1px var(--line-2);
-  transition: background-color .3s var(--ease), transform .3s var(--ease);
-}
-.topfilm__play[hidden] { display: none; }
-.topfilm__play svg { width: 18px; height: 18px; color: var(--gold-3); }
-.topfilm__play:hover { background: #fff; transform: translateY(-50%) scale(1.03); }
 
 .topfilm__veil {
   position: absolute;
@@ -2173,18 +2140,6 @@ select.field__control:hover { background-color: #fff; }
   .tabs__panel, .review-card__body { background: rgba(255, 255, 255, .85); }
   .quote-card { background: rgba(255, 255, 255, .9); }
   .float-card { background: rgba(255, 255, 255, .93); }
-
-  /* ---- Полоса видео ---- */
-  /* Узкая лента 16:9 на телефоне читается как тонкая «планка». Задаём высоту в
-     долях окна — ролик занимает полноценный первый экран. Строка с vh оставлена
-     запасной для браузеров без svh. */
-  .topfilm__frame {
-    aspect-ratio: auto;
-    height: clamp(300px, 58vh, 540px);
-    height: clamp(300px, 58svh, 540px);
-  }
-  /* длинный «шлейф» из градиентов внизу кадра — тоже лишняя работа для GPU */
-  .topfilm { --film-fade-bottom: min(24%, 200px); }
 
   /* ---- Крупные тап-цели в шапке ---- */
   .header__phone, .burger { width: 48px; height: 48px; }

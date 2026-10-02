@@ -560,121 +560,44 @@
   })();
 
   /* ---------------------------- ФОНОВОЕ ВИДЕО ------------------------------ */
-  /* Ролик в начале страницы — 4K и потому тяжёлый. Логика такая:
-       • на десктопе он играет сам, но только пока кадр в зоне видимости;
-       • на телефоне автозапуска нет: тяжёлый 4K-декод и есть причина лагов,
-         поэтому сначала виден лёгкий постер, а ролик включается по кнопке;
-       • при «экономном режиме»/медленной сети и при «уменьшении анимации»
-         видео не запускается вовсе — данные не тратятся, остаётся постер.
-     Для телефона рядом с основным роликом можно положить облегчённую версию —
-     её адрес указан в data-src-compact у <video>. Если файла нет, сработает
-     подстраховка и подставится полноразмерный ролик. */
+  /* Кадр в самом начале страницы играет сам, но только пока его видно: вне
+     экрана и в фоновой вкладке видео ставится на паузу, чтобы декодер не
+     отбирал кадры у прокрутки. При «уменьшении анимации» видео не запускается —
+     остаётся постер, он же подложка на время загрузки. */
   (function heroFilm() {
     var film = document.getElementById("topfilmVideo");
     if (!film) return;
 
-    var playBtn = document.getElementById("topfilmPlay");
-
-    /* ближайшая секция .topfilm — на неё навешиваем класс is-playing */
-    var band = film.parentNode;
-    while (band && band.nodeType === 1 && !(band.classList && band.classList.contains("topfilm"))) {
-      band = band.parentNode;
-    }
-
-    /* Экономия трафика: «экономный режим» браузера, медленная сеть (2G/3G) или
-       запрос браузера не тратить данные. */
-    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    var thrifty =
-      (conn && (conn.saveData || /(^|-)2g$|(^|-)3g$/.test(conn.effectiveType || ""))) ||
-      (window.matchMedia && window.matchMedia("(prefers-reduced-data: reduce)").matches);
-
-    var isPhone = !!(window.matchMedia && window.matchMedia("(max-width: 767px)").matches);
-    var canPlay = !prefersReduced && !thrifty;
-
-    /* на телефоне сами не запускаем: включается тапом по кнопке, дальше ролик
-       ведёт себя как обычное фоновое видео — пауза вне экрана */
-    var autoStart = canPlay && !isPhone;
-    var manual = false;
-
-    function hideButton() { if (playBtn) playBtn.hidden = true; }
-
-    function startPlayback() {
-      if (!canPlay || document.hidden) return;
-      var started = film.play();
-      if (started && started.then) {
-        started.then(function () {
-          hideButton();
-          if (band) band.classList.add("is-playing");
-        }).catch(function () { /* автозапуск запрещён — остаётся постер */ });
-      } else {
-        hideButton();
-        if (band) band.classList.add("is-playing");
-      }
-    }
-
-    /* Облегчённый ролик для телефона подставляем в момент запуска, а не заранее:
-       иначе при отсутствии облегчённого файла каждый заход с телефона давал бы
-       лишний «пустой» запрос. Нет файла — молча возвращаемся к полноразмерному. */
-    var compact = film.getAttribute("data-src-compact");
-    var compactUsed = false;
-
     function play() {
-      if (!canPlay || document.hidden) return;
-
-      if (isPhone && compact && !compactUsed) {
-        compactUsed = true;
-        film.setAttribute("data-src-full", film.getAttribute("src") || "");
-        film.addEventListener("error", function () {
-          var full = film.getAttribute("data-src-full");
-          if (full) {
-            film.src = full;
-            film.load();
-            startPlayback();
-          }
-        }, { once: true });
-        film.src = compact;
-        film.load();
-      }
-
-      startPlayback();
+      if (prefersReduced || document.hidden) return;
+      var started = film.play();
+      /* автозапуск может быть запрещён настройками браузера — тогда и постера
+         достаточно, никаких ошибок показывать не нужно */
+      if (started && started.catch) started.catch(function () {});
     }
 
     function pause() {
       if (!film.paused) film.pause();
     }
 
-    /* «уменьшение анимации» и экономный режим: видео не нужно вовсе */
-    if (!canPlay) {
-      if (playBtn) playBtn.hidden = true;
+    if (prefersReduced) {
+      pause();
       return;
-    }
-
-    if (!autoStart) {
-      /* телефон: показываем кнопку запуска, ролик стартует по тапу */
-      if (playBtn) {
-        playBtn.hidden = false;
-        playBtn.addEventListener("click", function () {
-          manual = true;
-          play();
-        });
-      }
     }
 
     if ("IntersectionObserver" in window) {
       var observer = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
-          if (!entry.isIntersecting) pause();                 /* вне экрана — на паузу */
-          else if (autoStart || manual) play();
+          if (entry.isIntersecting) play();
+          else pause();
         });
       }, { rootMargin: "150px 0px", threshold: 0.01 });
       observer.observe(film);
-    } else if (autoStart) {
-      play();
     }
 
     document.addEventListener("visibilitychange", function () {
       if (document.hidden) pause();
-      else if (autoStart || manual) play();
+      else play();
     });
   })();
 
