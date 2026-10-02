@@ -431,6 +431,10 @@ p { text-wrap: pretty; }
 .nav__link:hover, .nav__link.is-active { color: var(--ink); }
 .nav__link:hover::after, .nav__link.is-active::after { transform: scaleX(1); }
 
+/* Номер раздела («01», «02»…) нужен только в мобильном списке-меню, где ссылки
+   идут строками. В десктопной строке-меню он не показывается. */
+.nav__index { display: none; }
+
 .nav__footer { display: none; }
 
 .header__actions { display: flex; align-items: center; gap: 14px; }
@@ -547,7 +551,37 @@ p { text-wrap: pretty; }
      высоте (обычно это самые края кадра). */
   object-fit: cover;
   object-position: center;
+  /* выносим кадр в отдельный композитный слой: при прокрутке браузер не
+     перерисовывает видео вместе с остальной страницей — меньше «дёрганья» */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
+
+/* Кнопка запуска ролика. Нужна только там, где видео не стартует само — на
+   телефоне (тяжёлый 4K-декод даёт лаги, запуск идёт по тапу) и в экономном
+   режиме. На десктопе скрипт держит её скрытой через атрибут hidden. */
+.topfilm__play {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--gutter) + 4px);
+  z-index: 3;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 20px 13px 16px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, .92);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 16px 34px -18px rgba(31, 24, 27, .55), inset 0 0 0 1px var(--line-2);
+  transition: background-color .3s var(--ease), transform .3s var(--ease);
+}
+.topfilm__play[hidden] { display: none; }
+.topfilm__play svg { width: 18px; height: 18px; color: var(--gold-3); }
+.topfilm__play:hover { background: #fff; transform: translateY(-50%) scale(1.03); }
 
 .topfilm__veil {
   position: absolute;
@@ -1952,55 +1986,128 @@ select.field__control:hover { background-color: #fff; }
   .header__phone span { display: none; }
   .header__phone svg { width: 18px; height: 18px; }
 
+  /* --- Полноэкранное мобильное меню ---------------------------------------
+     Не просто список крупным шрифтом, а структурированный экран: сверху
+     прокручиваемый список разделов с номерами и разделителями, снизу —
+     закреплённый блок действий (запись, звонок, часы, соцсети). Бургер в
+     шапке (z-index выше) превращается в «крестик» закрытия. */
   .nav {
     position: fixed;
     inset: 0;
     z-index: 95;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: 32px;
-    overflow-y: auto;
+    gap: 0;
+    overflow: hidden;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;   /* прокрутка меню не «проваливается» на страницу */
     /* отступы учитывают «бровь» сверху и жестовую полосу снизу, чтобы контент
        меню не заезжал под вырезы экрана */
-    padding: calc(var(--header-h) + var(--safe-top, 0px) + 22px)
+    padding: calc(var(--header-h) + var(--safe-top, 0px) + 10px)
              calc(var(--gutter) + var(--safe-right, 0px))
-             calc(40px + var(--safe-bottom, 0px))
+             calc(22px + var(--safe-bottom, 0px))
              calc(var(--gutter) + var(--safe-left, 0px));
-    background: rgba(251, 247, 244, .96);
+    background: rgba(251, 247, 244, .97);
     backdrop-filter: blur(18px) saturate(140%);
     opacity: 0;
     visibility: hidden;
-    transform: translate3d(0, -10px, 0);
-    transition: opacity .4s var(--ease), transform .5s var(--ease), visibility .4s var(--ease);
+    transform: translate3d(0, -12px, 0);
+    transition: opacity .35s var(--ease), transform .45s var(--ease), visibility .35s var(--ease);
   }
   .nav.is-open { opacity: 1; visibility: visible; transform: none; }
 
-  .nav__list { flex-direction: column; gap: 2px; }
-  .nav__link {
-    font-family: var(--serif);
-    font-size: clamp(26px, 6.6vw, 38px);
-    line-height: 1.25;
-    padding-block: 8px;
+  /* Список ссылок занимает всё свободное место и прокручивается сам, поэтому
+     блок действий всегда «приклеен» к низу экрана. */
+  .nav__list {
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 6px;
+    border-top: 1px solid var(--line);
   }
   .nav__list li {
+    border-bottom: 1px solid var(--line);
     opacity: 0;
     transform: translate3d(0, 14px, 0);
     transition: opacity .5s var(--ease), transform .55s var(--ease);
   }
-  .nav.is-open .nav__list li { opacity: 1; transform: none; }
-  .nav.is-open .nav__list li:nth-child(1) { transition-delay: .06s; }
-  .nav.is-open .nav__list li:nth-child(2) { transition-delay: .12s; }
-  .nav.is-open .nav__list li:nth-child(3) { transition-delay: .18s; }
-  .nav.is-open .nav__list li:nth-child(4) { transition-delay: .24s; }
-  .nav.is-open .nav__list li:nth-child(5) { transition-delay: .3s; }
-  .nav.is-open .nav__list li:nth-child(6) { transition-delay: .36s; }
 
-  .nav__footer { display: block; padding-top: 24px; border-top: 1px solid var(--line); }
-  .nav__phone { display: block; font-size: 20px; font-weight: 700; }
-  .nav__hours { display: block; margin-top: 4px; font-size: 13px; color: var(--muted); }
+  /* Крупный, но не гигантский шрифт: строка читается целиком и легко
+     нажимается пальцем (высота строки ≥ 58px). */
+  .nav__link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 58px;
+    padding-block: 14px;
+    font-family: var(--serif);
+    font-size: clamp(22px, 6.4vw, 30px);
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .nav__link::after { display: none; }   /* анимированное подчёркивание тут лишнее */
+  .nav__index {
+    display: inline-block;
+    min-width: 1.9em;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    color: var(--gold-3);
+  }
+  .nav__label { flex: 1; }
+
+  .nav.is-open .nav__list li { opacity: 1; transform: none; }
+  .nav.is-open .nav__list li:nth-child(1) { transition-delay: .04s; }
+  .nav.is-open .nav__list li:nth-child(2) { transition-delay: .09s; }
+  .nav.is-open .nav__list li:nth-child(3) { transition-delay: .14s; }
+  .nav.is-open .nav__list li:nth-child(4) { transition-delay: .19s; }
+  .nav.is-open .nav__list li:nth-child(5) { transition-delay: .24s; }
+  .nav.is-open .nav__list li:nth-child(6) { transition-delay: .29s; }
+
+  /* Нижний блок действий */
+  .nav__footer {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 18px;
+  }
+  .nav__cta { width: 100%; }
+
+  .nav__phone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 50px;
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, .7);
+    box-shadow: inset 0 0 0 1px var(--line);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .nav__phone svg { width: 18px; height: 18px; color: var(--gold-3); }
+  .nav__hours { text-align: center; font-size: 12.5px; color: var(--muted); }
+
+  .nav__socials { display: flex; justify-content: center; gap: 12px; margin-top: 4px; }
+  .nav__socials a {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: var(--gold-3);
+    background: rgba(255, 255, 255, .7);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+    transition: background-color .3s var(--ease), color .3s var(--ease), transform .3s var(--ease);
+  }
+  .nav__socials a:hover { background: var(--grad-gold); color: #241B1F; transform: translateY(-2px); }
+  .nav__socials .soc-ico { width: 20px; height: 20px; }
 
   .blob { filter: blur(40px); opacity: .5; }
 }
@@ -2031,19 +2138,66 @@ select.field__control:hover { background-color: #fff; }
    подгоняем крупные блоки под палец. Разметка и сценарии не меняются, поэтому
    содержимое страницы и поведение остаются прежними. */
 @media (max-width: 767px) {
+  /* ---- Оптимизация отрисовки: главный источник «тормозов» на телефоне ---- */
   /* Три больших анимированных размытия («блобы») в первом экране — самый
-     тяжёлый слой страницы: на телефоне мягкую цветную подложку героя строит
-     статичный градиент body::before, а сами плавающие круги убираем совсем */
+     тяжёлый слой страницы: мягкую цветную подложку героя и так строит статичный
+     градиент body::before, а сами плавающие круги убираем совсем. */
   .hero__bg .blob { display: none; }
+  /* Зерно поверх героя использует mix-blend-mode — ещё один дорогой эффект. */
+  .hero__bg .grain { display: none; }
 
-  /* Фоновая полоса видео: узкая лента 16:9 на телефоне выглядит тонкой
-     «планкой». Задаём высоту в долях окна — ролик читается как полноценная
-     шапка героя. vh-строка оставлена запасной для браузеров без svh. */
+  /* Куча размытых подложек (backdrop-filter) на карточках пересчитывается в
+     каждом кадре прокрутки — на мобильном GPU это и есть основная причина
+     «дёрганья» по всей странице. Заменяем размытие на чуть более плотную
+     заливку: вид почти тот же, а лишняя работа уходит. */
+  .header.is-scrolled,
+  .nav,
+  .service-card,
+  .master-card,
+  .contact-row,
+  .fact,
+  .tabs__nav,
+  .tabs__panel,
+  .review-card__body,
+  .quote-card,
+  .faq__call,
+  .map-card__bar,
+  .float-card,
+  .avatar--lg { backdrop-filter: none; -webkit-backdrop-filter: none; }
+
+  .header.is-scrolled { background: rgba(251, 247, 244, .96); }
+  .service-card { background: rgba(255, 255, 255, .8); }
+  .master-card { background: rgba(255, 255, 255, .82); }
+  .contact-row, .fact { background: rgba(255, 255, 255, .78); }
+  .tabs__nav { background: rgba(255, 255, 255, .82); }
+  .tabs__panel, .review-card__body { background: rgba(255, 255, 255, .85); }
+  .quote-card { background: rgba(255, 255, 255, .9); }
+  .float-card { background: rgba(255, 255, 255, .93); }
+
+  /* ---- Полоса видео ---- */
+  /* Узкая лента 16:9 на телефоне читается как тонкая «планка». Задаём высоту в
+     долях окна — ролик занимает полноценный первый экран. Строка с vh оставлена
+     запасной для браузеров без svh. */
   .topfilm__frame {
     aspect-ratio: auto;
     height: clamp(300px, 58vh, 540px);
     height: clamp(300px, 58svh, 540px);
   }
+  /* длинный «шлейф» из градиентов внизу кадра — тоже лишняя работа для GPU */
+  .topfilm { --film-fade-bottom: min(24%, 200px); }
+
+  /* ---- Крупные тап-цели в шапке ---- */
+  .header__phone, .burger { width: 48px; height: 48px; }
+
+  /* ---- Меньше «воздуха» в блоках: страница короче, листать удобнее ---- */
+  .service-card { padding: 22px; }
+  .master-card__body { padding: 20px; }
+  .contact-row { padding: 18px; }
+  .fact { padding: 20px; }
+  .faq__call { padding: 14px 20px; }
+  .about__panel { height: 210px; }
+  .quote-card { margin-top: -56px; padding: 24px; }
+  .collage__wordmark { font-size: clamp(2.2rem, 11vw, 3.2rem); }
 }
 
 @media (max-width: 560px) {
@@ -2071,7 +2225,15 @@ select.field__control:hover { background-color: #fff; }
     padding-inline: 12px;
   }
   .tabs__nav::-webkit-scrollbar { display: none; }
-  .tabs__btn { flex: none; scroll-snap-align: start; }
+  .tabs__btn { flex: none; scroll-snap-align: start; min-height: 44px; display: inline-flex; align-items: center; }
+
+  /* Кнопки и поля — «под палец»: минимальная высота 48px, чтобы по ним
+     уверенно попадать (рекомендация Apple/Google для тач-интерфейсов) */
+  .btn { min-height: 48px; }
+  .field__control { min-height: 52px; }
+  .checkbox input[type="checkbox"] { width: 24px; height: 24px; }
+  .slider__btn { width: 52px; height: 52px; }
+  .footer__socials a { min-height: 48px; }
 }
 
 /* Очень узкие экраны (320–400px): ужимаем логотип и промежутки шапки, чтобы

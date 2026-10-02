@@ -29,9 +29,9 @@
   <link rel="stylesheet" media="print" onload="this.media='all'" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Manrope:wght@300;400;500;600;700&display=swap"></noscript>
 
-  <!-- ?v=6 — версия файла: браузер сразу возьмёт свежий styles.css, а не копию
-       из кэша. После правок стилей увеличивайте число (v=7, v=8 …). -->
-  <link rel="stylesheet" href="assets/css/styles.css?v=6">
+  <!-- ?v=7 — версия файла: браузер сразу возьмёт свежий styles.css, а не копию
+       из кэша. После правок стилей увеличивайте число (v=8, v=9 …). -->
+  <link rel="stylesheet" href="assets/css/styles.css?v=7">
 
   <script type="application/ld+json">
   {
@@ -97,18 +97,35 @@
         </span>
       </a>
 
+      <!-- На десктопе .nav — обычная строка ссылок. На мобильных (<=1023px) тот же
+           .nav превращается в полноэкранное меню: список разделов с номерами и
+           разделителями сверху + закреплённый блок действий снизу (запись,
+           звонок, часы, соцсети). Разметка одна на оба режима. -->
       <nav class="nav" id="nav" aria-label="Основная навигация">
         <ul class="nav__list">
-          <li><a class="nav__link" href="#about">О салоне</a></li>
-          <li><a class="nav__link" href="#services">Услуги</a></li>
-          <li><a class="nav__link" href="#prices">Цены</a></li>
-          <li><a class="nav__link" href="#team">Мастера</a></li>
-          <li><a class="nav__link" href="#reviews">Отзывы</a></li>
-          <li><a class="nav__link" href="#contacts">Контакты</a></li>
+          <li><a class="nav__link" href="#about"><span class="nav__index" aria-hidden="true">01</span><span class="nav__label">О салоне</span></a></li>
+          <li><a class="nav__link" href="#services"><span class="nav__index" aria-hidden="true">02</span><span class="nav__label">Услуги</span></a></li>
+          <li><a class="nav__link" href="#prices"><span class="nav__index" aria-hidden="true">03</span><span class="nav__label">Цены</span></a></li>
+          <li><a class="nav__link" href="#team"><span class="nav__index" aria-hidden="true">04</span><span class="nav__label">Мастера</span></a></li>
+          <li><a class="nav__link" href="#reviews"><span class="nav__index" aria-hidden="true">05</span><span class="nav__label">Отзывы</span></a></li>
+          <li><a class="nav__link" href="#contacts"><span class="nav__index" aria-hidden="true">06</span><span class="nav__label">Контакты</span></a></li>
         </ul>
+
         <div class="nav__footer">
-          <a class="nav__phone" href="tel:+74951234567">+7 (495) 123-45-67</a>
-          <span class="nav__hours">Ежедневно с 09:00 до 22:00</span>
+          <a class="btn btn--book nav__cta" href="#booking">Записаться онлайн</a>
+
+          <a class="nav__phone" href="tel:+74951234567">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.6 3.5 9 8l-1.8 2.2a12.5 12.5 0 0 0 6.6 6.6L16 15l4.5 2.4-.6 3a1.6 1.6 0 0 1-1.8 1.3C10.6 20.9 3.1 13.4 2.3 5.9A1.6 1.6 0 0 1 3.6 4.1l3-.6Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <span>+7 (495) 123-45-67</span>
+          </a>
+          <span class="nav__hours">Ежедневно с 09:00 до 22:00 · без выходных</span>
+
+          <ul class="nav__socials">
+            <li><a href="https://vk.com/" target="_blank" rel="noopener" aria-label="ВКонтакте"><svg class="soc-ico" aria-hidden="true"><use href="#ico-vk"></use></svg></a></li>
+            <li><a href="https://telegram.org/" target="_blank" rel="noopener" aria-label="Telegram"><svg class="soc-ico" aria-hidden="true"><use href="#ico-telegram"></use></svg></a></li>
+            <li><a href="https://web.whatsapp.com/" target="_blank" rel="noopener" aria-label="WhatsApp"><svg class="soc-ico" aria-hidden="true"><use href="#ico-whatsapp"></use></svg></a></li>
+            <li><a href="https://www.instagram.com/" target="_blank" rel="noopener" aria-label="Instagram"><svg class="soc-ico" aria-hidden="true"><use href="#ico-instagram"></use></svg></a></li>
+          </ul>
         </div>
       </nav>
 
@@ -129,15 +146,29 @@
     <!-- ================= АТМОСФЕРА: живое видео ================= -->
     <section class="topfilm" aria-label="Атмосфера салона">
       <div class="topfilm__frame">
-        <!-- autoplay НЕ выставлен в разметке: ролик запускает main.js только когда
-             он попал в экран и у гостя не включён «экономный режим» интернета — так
-             телефон не качает тяжёлое 4K-видео зря, а до старта виден постер-кадр -->
+        <!-- autoplay НЕ выставлен в разметке: ролик запускает main.js. На десктопе —
+             сам, когда кадр попал в экран; на телефоне — только по кнопке ниже
+             (тяжёлый 4K-декод на телефоне и есть причина лагов), а при «экономном
+             режиме» интернета видео вообще не качается, остаётся постер-кадр.
+
+             data-src-compact — облегчённый ролик для телефона: положите рядом файл
+             beauty-salon-main-mobile.mp4 (720p, ~1–2 Мбит/с). Если его нет — скрипт
+             молча вернётся к полноразмерному ролику. -->
         <video class="topfilm__video" id="topfilmVideo"
                src="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/video/beauty-salon-main.mp4"
+               data-src-compact="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/video/beauty-salon-main-mobile.mp4"
                poster="https://global.s3.cloud.ru/websites-media/SinglePageLeadSiteBeautySalon/images/beauty-salon-main.webp"
                muted loop playsinline preload="metadata" disablepictureinpicture
                aria-hidden="true" tabindex="-1"></video>
         <span class="topfilm__veil" aria-hidden="true"></span>
+
+        <!-- кнопка запуска ролика: показывается только на телефоне, пока видео не
+             играет. Скрипт держит её скрытой (hidden) на десктопе и в экономном
+             режиме — там, где ролик стартует сам или не нужен вовсе -->
+        <button class="topfilm__play" id="topfilmPlay" type="button" hidden>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 6.3v11.4L18.6 12 9 6.3Z" fill="currentColor"/></svg>
+          <span>Включить видео</span>
+        </button>
         <p class="eyebrow topfilm__label"><span class="eyebrow__pulse" aria-hidden="true"></span>Живая атмосфера салона</p>
       </div>
     </section>
