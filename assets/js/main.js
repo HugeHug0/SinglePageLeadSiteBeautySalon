@@ -192,7 +192,33 @@
     var observer = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
-        entry.target.classList.add("is-visible");
+
+        var el = entry.target;
+
+        /* Крупные секции (например, карточка записи с градиентами, скруглением и
+           обрезкой по контуру) во время анимации появления перерисовываются в
+           каждом кадре — именно это читается как «подлагивание» при первом
+           появлении блока. Заранее подсказываем браузеру поднять элемент на
+           отдельный слой, чтобы анимировались только opacity и transform. */
+        el.style.willChange = "opacity, transform";
+        el.classList.add("is-visible");
+
+        /* Подсказка нужна только на время анимации: десятки постоянных слоёв
+           съедают память мобильного GPU, поэтому снимаем её. Обычно хватает
+           transitionend, но он может не прийти (фон вкладки, пропущенные
+           кадры), поэтому подстраховываемся таймером самой долгой анимации. */
+        var release = function () {
+          window.clearTimeout(timer);
+          el.style.willChange = "";
+          el.removeEventListener("transitionend", onEnd);
+        };
+        var onEnd = function (event) {
+          if (event.target !== el) return;   /* переходы детей сюда не считаем */
+          release();
+        };
+        var timer = window.setTimeout(release, 1200);
+        el.addEventListener("transitionend", onEnd);
+
         observer.unobserve(entry.target);
       });
     }, { rootMargin: "0px 0px -7% 0px", threshold: 0.12 });
@@ -945,8 +971,19 @@
         setStatus("Спасибо! Заявка отправлена — администратор перезвонит и подтвердит время.", "success");
         form.removeAttribute("data-sending");
         if (submit) submit.disabled = false;
-        /* явный экран успеха: прячем форму и показываем сообщение об отправке */
-        if (card) card.classList.add("is-done");
+        /* Явный экран успеха: прячем форму и показываем сообщение об отправке.
+           Карточка становится заметно короче, а страница — ниже: без правки
+           прокрутка оставалась на прежней позиции, и взгляд «спускался» под
+           карточку. После перерисовки возвращаем карточку в центр экрана. */
+        if (card) {
+          card.classList.add("is-done");
+          window.requestAnimationFrame(function () {
+            card.scrollIntoView({
+              behavior: prefersReduced ? "auto" : "smooth",
+              block: "center"
+            });
+          });
+        }
       }, SUCCESS_DELAY);
     });
   })();

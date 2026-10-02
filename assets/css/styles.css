@@ -116,6 +116,19 @@ body::before {
 
 body.is-locked { overflow: hidden; }
 
+/* Пока открыто полноэкранное мобильное меню, шапка НЕ должна создавать
+   containing block для его фиксированного позиционирования. Такой block
+   появляется из-за backdrop-filter у .header.is-scrolled, и тогда .nav с
+   position: fixed отсчитывался не от окна, а от полосы шапки — меню сжималось
+   до её высоты и выглядело «не открывшимся». Проявлялось там, где ширина окна
+   больше 767px (медиазапрос ниже отключает размытие только на телефонах), то
+   есть на планшетах и на телефоне в горизонтальной ориентации. */
+body.is-locked .header,
+body.is-locked .header.is-scrolled {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 img, svg, video { display: block; max-width: 100%; }
 svg { flex: none; }
 
@@ -1987,6 +2000,12 @@ select.field__control:hover { background-color: #fff; }
      блок действий всегда «приклеен» к низу экрана. */
   .nav__list {
     flex: 1 1 auto;
+    /* Без min-height: 0 flex-элемент не может сжаться ниже содержимого: на
+       низком экране (телефон в горизонтальной ориентации) список не начинал
+       прокручиваться, а выдавливал нижний блок действий за пределы меню, где
+       его обрезал overflow: hidden. С нулевой минимальной высотой список
+       корректно сжимается и скроллится сам, а блок действий всегда виден. */
+    min-height: 0;
     flex-direction: column;
     gap: 0;
     overflow-y: auto;
@@ -2077,6 +2096,29 @@ select.field__control:hover { background-color: #fff; }
   .nav__socials .soc-ico { width: 20px; height: 20px; }
 
   .blob { filter: blur(40px); opacity: .5; }
+}
+
+/* Короткий экран — телефон в горизонтальной ориентации. Полноэкранное меню
+   обязано помещаться целиком, поэтому делаем строки разделов и нижний блок
+   действий компактнее; длинный список по-прежнему прокручивается сам
+   (см. min-height: 0 у .nav__list). Портретную ориентацию не трогаем: там
+   высота окна больше 620px. */
+@media (max-width: 1023px) and (max-height: 620px) {
+  .nav { padding-top: calc(var(--header-h) + var(--safe-top, 0px) + 4px); }
+
+  .nav__link {
+    min-height: 46px;
+    padding-block: 10px;
+    font-size: clamp(18px, 4.4vw, 23px);
+  }
+  .nav__index { min-width: 1.7em; font-size: 11px; }
+
+  .nav__footer { gap: 8px; padding-top: 12px; }
+  .nav__phone { min-height: 46px; font-size: 15px; }
+  .nav__hours { font-size: 12px; }
+  .nav__socials { margin-top: 2px; }
+  .nav__socials a { width: 40px; height: 40px; }
+  .nav__socials .soc-ico { width: 18px; height: 18px; }
 }
 
 @media (max-width: 767px) {
