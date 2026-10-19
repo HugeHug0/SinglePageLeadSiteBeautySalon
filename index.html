@@ -31,7 +31,7 @@
 
   <!-- ?v=9 — версия файла: браузер сразу возьмёт свежий styles.css, а не копию
        из кэша. После правок стилей увеличивайте число (v=10, v=11 …). -->
-  <link rel="stylesheet" href="assets/css/styles.css?v=9">
+  <link rel="stylesheet" href="assets/css/styles.css?v=10">
 
   <script type="application/ld+json">
   {
@@ -995,7 +995,11 @@
     <!-- ================= BOOKING ================= -->
     <section class="section booking" id="booking">
       <div class="shell">
-        <div class="booking__card" data-reveal>
+        <!-- Карточка записи — намеренно БЕЗ data-reveal, то есть без анимации
+             появления: это самая большая область страницы (1144×923 px), и её
+             перерисовка в каждом кадре анимации читается как «лагает форма».
+             Подробности и замеры — в комментарии к блоку REVEAL в styles.css. -->
+        <div class="booking__card">
           <header class="section-head">
             <p class="section-label">08 — Запись</p>
             <h2 class="h2">Записаться в <em>Terata</em></h2>
@@ -1206,8 +1210,8 @@
   <!-- всплывающее уведомление: в демо-проекте кнопки звонка (tel:) не звонят -->
   <div class="demo-toast" id="demoToast" role="status" aria-live="polite">Это демонстрационный проект</div>
 
-  <!-- ?v=2 — версия файла: после правок логики увеличивайте число (v=3, v=4 …),
+  <!-- ?v=3 — версия файла: после правок логики увеличивайте число (v=4, v=5 …),
        чтобы браузер не взял старый main.js из кэша. -->
-  <script src="assets/js/main.js?v=2" defer></script>
+  <script src="assets/js/main.js?v=4" defer></script>
 </body>
 </html>
