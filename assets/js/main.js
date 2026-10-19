@@ -669,7 +669,8 @@
 
   /* ---------------------------- ФОРМА ЗАПИСИ ------------------------------ */
   /* Собирает данные формы секции #booking, проверяет обязательные поля (имя,
-     телефон, согласие) и отправляет JSON на серверless-функцию /api/get-data.
+     телефон, согласие) и отправляет JSON напрямую в Google Apps Script (GAS) —
+     сайт полностью статичный, без серверной части.
      Поля телефон/дата/время маскируются при вводе: только цифры, автоформат,
      корректный backspace; несуществующую дату и время ввести нельзя. Остальные
      поля (услуга, мастер, комментарий) уходят как есть. Скрытое поле-ловушка
@@ -682,7 +683,11 @@
 
     var status = $("#bookingStatus");
     var submit = $("button[type='submit']", form);
-    var ENDPOINT = "/api/get-data";
+    /* Адрес веб-приложения Google Apps Script: заявки уходят туда напрямую,
+       серверная часть сайту не нужна. Ссылку даёт развёртывание скрипта
+       («Развернуть» → «Веб-приложение»), она заканчивается на /exec —
+       вставьте её в кавычки ниже. */
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbx9RCpjlVIduzbuUur6wRknT5YfL1YXswuS_i1iOwPXTIrEuapPG1bTZu8gfEAipDeDyQ/exec';
     var SUCCESS_DELAY = 500;   /* искусственная пауза перед показом успеха, мс */
 
     /* обязательные поля берём из самой формы по их name-атрибутам */
@@ -940,31 +945,66 @@
       if (submit) submit.disabled = true;
       setStatus("Отправляем заявку…");
 
-      /* Запрос уходит «в фоне» и не влияет на экран: ответ сервера (в том числе
+      /* Запрос уходит «в фоне» и не влияет на экран: ответ GAS (в том числе
          ошибку) не показываем — гость в любом случае увидит успех. Ошибку сети
-         гасим здесь же, чтобы «непойманный» запрос не всплыл в консоли. */
+         гасим здесь же, чтобы «непойманный» запрос не всплыл в консоли.
+         Google Apps Script не отдаёт CORS-заголовки, поэтому шлём text/plain и
+         mode: "no-cors": ответ нам не нужен, важно лишь записать заявку. */
       try {
-        window.fetch(ENDPOINT, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }).then((response) => {
-            if (!response.ok) {
-              throw new Error(`Ошибка сервера: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log('Успешно записано:', data.success);
-            console.log('Ответ сервера:', data.data);
-          })
-          .catch((err) => {
-            console.error("Ошибка при отправке данных:", err);
-          });
+        if (!GAS_URL) {
+          console.warn("Не задан GAS_URL — заявка не отправлена:", payload);
+        } else {
+          window.fetch(GAS_URL, {
+              method: 'POST',
+              redirect: 'follow', // Автоматически следует за редиректами Google
+              headers: {
+                'Content-Type': 'text/plain;charset=utf-8'
+              },
+              body: JSON.stringify(payload) 
+            })
+            .then(async (externalResponse) => {
+            
+              const responseText = await externalResponse.text();
+              
+              let data;
+              try {
+                data = JSON.parse(responseText);
+              } catch {
+                data = { message: responseText };
+              }
+
+              // Если статус ответа от Google не в диапазоне 200-299
+              if (!externalResponse.ok) {
+                throw {
+                  isServerError: true,
+                  error: 'Ошибка внешнего сервиса',
+                  status: externalResponse.status,
+                  data
+                };
+              }
+
+              
+              return {
+                success: true,
+                data
+              };
+            })
+            .then((result) => {
+              console.log('Успешно записано:', result.success);
+              console.log('Ответ сервера:', result.data);
+            })
+            .catch((err) => {
+              if (err.isServerError) {
+                console.error(`Ошибка при отправке данных (${err.status}):`, err.error, err.data);
+              } else {
+                console.error("Критическая ошибка при отправке данных:", err.message || err);
+              }
+            });
+        }
       } catch (e) { /* офлайн или старый браузер — успех всё равно покажем */ }
 
       /* Асинхронная пауза 500 мс: setTimeout не блокирует поток и не «замораживает»
-         интерфейс. После неё показываем успех независимо от ответа сервера. */
+         интерфейс. После неё показываем успех независимо от ответа GAS. */
       window.setTimeout(function () {
         form.reset();
         Object.keys(fields).forEach(function (key) { setInvalid(fields[key], false); });
